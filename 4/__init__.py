@@ -9,6 +9,9 @@ class BingoHall(object):
         card.name = 'Card %s' % (len(self.cards)+1)
         self.cards.append(card)
 
+    def remove_card(self, target_card):
+        self.cards.remove(target_card)
+
     def get_cards(self):
         return self.cards
 
@@ -21,14 +24,17 @@ class BingoHall(object):
         print('Calling numbers %s' % self.ball_order)
         for number in self.ball_order:
             self.call_number(number)
-            self.print_cards()
+            #self.print_cards()
 
-            winner = self.check_for_winner()
-            if winner:
-                print("Winner winner chicken dinner!")
-                print(winner)
-                print('Score: %s' % winner.calc_score(number))
-                raise self.MotherFuckingWinner
+            while True:
+                winner = self.check_for_winner()
+                if winner:
+                    print("Winner winner chicken dinner!")
+                    print(winner)
+                    print('Score: %s' % winner.calc_score(number))
+                    self.remove_card(winner)
+                else:
+                    break
 
     def call_number(self, number):
         print('Calling number %s' % number)
