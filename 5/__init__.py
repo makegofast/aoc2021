@@ -14,34 +14,65 @@ class AutoPilot(object):
 
     def prime_map(self):
         for line_data in self.vent_data:
-            if line_data['x1'] != line_data['x2'] and line_data['y1'] != line_data['y2']:
-                print('%s not a straight line, ignoring' % line_data)
-            else:
-                self.apply_line(**line_data)
+            self.apply_line(**line_data)
 
     def apply_line(self, x1, y1, x2, y2):
         print('Applying line %s,%s -> %s,%s' % (x1,y1,x2,y2))
 
-        xs = [x1,x2]
-        xs.sort()
+        print(x1, y1, x2, y2)
 
-        ys = [y1,y2]
-        ys.sort()
+        if x1 - x2 > 0:
+            xdir = -1
+            x2 -= 1
+        else:
+            xdir = 1
+            x2 += 1
 
-        x1, x2 = xs
-        y1, y2 = ys
+        if y1 - y2 > 0:
+            ydir = -1
+            y2 -= 1 
+        else:
+            ydir = 1
+            y2 += 1
 
-        for x in range(x1, x2+1):
-            for y in range(y1, y2+1):
-                print('extrapolate %s,%s' % (x, y))
-                self.map.setdefault(x, {})
-                self.map[x].setdefault(y, 0)
-                self.map[x][y] += 1
+        print('%s...%s (%s) %s...%s (%s)' % (x1, x2, xdir, y1, y2, ydir))
+
+        xs = list(range(x1, x2, xdir))
+        ys = list(range(y1, y2, ydir))
+
+        print(xs, ys)
+
+        if len(xs) == 1:
+            xs = xs * len(ys)
+
+        if len(ys) == 1:
+            ys = ys * len(xs)
+
+        print(xs, ys)
+
+        for x,y in zip(xs, ys):
+            print('extrapolate %s,%s' % (x, y))
+            self.map.setdefault(x, {})
+            self.map[x].setdefault(y, 0)
+            self.map[x][y] += 1
 
     def print_map(self):
-        for x, xd in self.map.items():
-            for y, yd in xd.items():
-                print(x, y, self.map[x][y])
+        height = max(self.map)+1
+        width = max((max(yd)+1 for y, yd in self.map.items()))
+        max_len = 0
+
+        lines = []
+        for x in range(0, height):
+            line = []
+            for y in range(0, width):
+                val = self.map.get(x, {}).get(y, 0)
+                if len(str(val)) > max_len:
+                    max_len = len(str(val))
+                line.append(val)
+            lines.append(line)
+
+        for line in lines:
+            print(' '.join((str(val).replace('0', '.').center(max_len) for val in line)))
 
     def count_hotspots(self):
         count = 0
