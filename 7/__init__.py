@@ -1,32 +1,61 @@
 class TargetingSystem(object):
-    def __init__(self):
-        pass
-
     def load_data(self, data):
-        self.data = data
+        self.data = [int(v) for v in data.split(',')]
 
-    def aim(self):
+    def aim(self, cost_func):
         best = None 
-        for t in range(1, len(self.data)+1):
-            cost = self.calc_cost(t) 
-            print('aim %s cost %s' % (t, cost)) 
+
+        for target in range(1, len(self.data)+1):
+            cost = cost_func(target)
             if not best or cost < best['cost']:
-                best = {'target': t, 'cost': cost}
+                best = {'target': target, 'cost': cost}
 
         return best
 
-    def calc_cost(self, t):
-        return sum([abs(t-p) for p in self.data])
+    def calc_cost_simple(self, target):
+        return sum([abs(target-start) for start in self.data])
 
-    def status(self):
-        print(self.data)
+    def calc_cost_increasing(self, target):
+        costs = []
+        for start  in self.data:
+           delta = abs(target-start)
+           costs.append(delta*(delta+1)/2) 
+        return int(sum(costs))
 
-if __name__ == '__main__':
-    data = [int(l) for l in open('data.txt', 'r').readline().rstrip().split(',')]
+def get_data():
+    return open('data.txt', 'r').readline().rstrip()
 
+def get_test_data():
+    return open('test_data.txt', 'r').readline().rstrip()
+
+def run_tests():
+    results = []
+
+    results.append(solution(get_test_data(), 'simple') == 37)
+    results.append(solution(get_test_data(), 'increasing') == 168)
+    results.append(solution(get_data(), 'simple') == 348996)
+    results.append(solution(get_data(), 'increasing') == 98231647)
+
+    passed = sum(results)
+    failed = len(results) - passed 
+
+    print('Test: %s passed, %s failed' % (passed, failed))
+
+    if failed:
+        raise Exception('%s tests failed' % failed)
+
+def solution(data, cost_type):
     ts = TargetingSystem()
     ts.load_data(data)
-    best = ts.aim()
-    print('Best target %s costs %s' % (best['target'], best['cost']))
 
-    ts.status()
+    cost_func = getattr(ts, 'calc_cost_%s' % cost_type)
+    best = ts.aim(cost_func)
+    print('%s best target %s costs %s' % (cost_type, best['target'], best['cost']))
+
+    return best['cost']
+
+if __name__ == '__main__':
+    run_tests()
+
+    solution(get_data(), 'simple') 
+    solution(get_data(), 'increasing') 
