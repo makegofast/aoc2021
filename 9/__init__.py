@@ -4,76 +4,111 @@ class AutoNavigation(object):
 
     def load_data(self, data):
         self.data = []
-        self.low_points = {} 
+
+        self.width = 0
+        self.height = 0
 
         for line in data:
-            self.data.append([c for c in line])
+            row = [int(c) for c in line]
+            self.width = max(self.width, len(row)-1)
+            self.data.append(row)
 
-    def detect_low_points(self):
-        low_points = {} 
+        self.height = len(self.data)-1
 
-        for row in range(0, len(self.data)):
-            for col in range(0, len(self.data[row])):
-                val = self.data[row][col]
-                lower = self.check_neighbors(row, col)
-                if lower == 0:
-                    print('low point %s %s' % (row, col))
-                    low_points.setdefault(row, {})
-                    low_points[row][col] = val 
+    def value_at(self, row, col):
+        if row < 0 or col < 0 or row > self.height or col > self.width: 
+            return None
 
-        self.low_points = low_points
-        return low_points
+        return self.data[row][col]
 
-    def check_neighbors(self, row, col):
-        lower = 0 
-        same = 0
-        checked = 0
-        me = self.data[row][col]
-        neighbors = [[row,col-1], [row, col+1], [row-1,col], [row+1, col]]
-        for neighbor in neighbors:
-            nr, nc = tuple(neighbor)
-            print("checking %s,%s's neighbor %s,%s" % (row, col, nr, nc))
+    def detect_basins(self):
+        basins = []
 
-            if nr < 0 or nc < 0 or nr > len(self.data)-1 or nc > len(self.data[row])-1:
-                print('%s,%s is out of bounds' % (nr, nc))
+        for row in range(0, self.height+1):
+            for col in range(0, self.width+1):
+                basin, visited = self.crawl(row, col)
+                if basin:
+                    basins.append(basin)
+
+        print(self.status(basins))
+        return basins
+
+    def crawl(self, row, col):
+        visited = {}
+        basin = []
+
+        visited.setdefault(row, {})
+        visited[row].setdefault(col, False)
+
+        visited[row][col] = True
+
+        my_val = self.value_at(row, col)
+
+        if my_val == 9:
+            return None, visited
+
+        scan_points = [
+            [row-1, col],
+            [row+1, col],
+            [row, col-1],
+            [row, col+1]
+        ]
+
+        for point in scan_points:
+            point_val = self.value_at(point[0], point[1])
+            if point_val == None: #Out of bounds
                 continue
 
-            checked += 1 
+            if point_val < my_val:
+                return None, visited
 
-            nval = self.data[nr][nc]
+        basin.append([row,col,my_val])
 
-            if nval == me:
-                same += 1
-            elif nval < me:
-                lower += 1
+        return basin, visited
 
-        if same == checked:
-            print('all the same')
-            return checked
-        else:
-            return lower
+    def calculate_risk_level(self, basins):
+        risk = 0
 
-    def calculate_risk_level(self, low_points):
-        count = 0
-        for i, row in low_points.items():
-            count += sum(int(v)+1 for k,v in row.items())
+        for basin in basins:
+            for p in basin:
+                risk += 1 + p[2]
     
-        return count
+        return risk 
 
-    def status(self):
+    def in_basin(self, basins, row, col):
+        for basin in basins:
+            for p in basin:
+                if p[0] == row and p[1] == col:
+                    return True
+
+    def status(self, basins=[], visited={}):
         ret = []
-        for row in range(0, len(self.data)):
-            line = []
-            for col in range(0, len(self.data[row])):
-                val = self.data[row][col]
-                is_low = self.low_points.get(row, {}).get(col, 0)
-                if is_low:
-                    val = '(%s)' % val
-                line.append(val.center(3))
-            ret.append(' '.join(line))
 
-        print('\n'.join(ret))
-        return ret
+        print('Status')
+        for row in range(0, self.height):
+            line = '' 
+
+            for col in range(0, self.width):
+                val = self.value_at(row, col)
+                if self.in_basin(basins, row, col):
+                    val = bcolor('red', val)
+                elif visited.get(row, {}).get(col, False):
+                    val = bcolor('blue', val)
+                line += str(val)
+
+            ret.append(line)
+
+        ret.append('')
+        return '\n'.join(ret)
+
+def bcolor(color, text):
+    colors = {
+        'blue': '\033[94m',
+        'red': '\033[91m',
+        'reset': '\033[0m'
+    }
+
+    return colors[color] + str(text) + colors['reset'] 
 
 def get_data():
     return [l.strip() for l in open('data.txt', 'r').readlines()]
@@ -83,12 +118,12 @@ def get_test_data():
 
 def solution(data):
     an = AutoNavigation()
+
     an.load_data(data)
-    lp = an.detect_low_points()
-    print(lp)
-    an.status()
+    lp = an.detect_basins()
+
     rl = an.calculate_risk_level(lp)
-    print(rl)
+    print('Risk Level:',rl)
 
 if __name__ == '__main__':
     data = get_test_data()
