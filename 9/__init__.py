@@ -43,9 +43,11 @@ class AutoNavigation(object):
 
         for row in range(0, self.height+1):
             for col in range(0, self.width+1):
-                algo_fn(row, col)
+                basin = algo_fn(row, col, [])
+                if basin:
+                    self.basins.append(basin)
 
-        print(self.status())
+        self.status()
 
     def status(self):
         ret = []
@@ -64,7 +66,7 @@ class AutoNavigation(object):
                 line += str(val)
             print(line)
 
-    def crawl_part_1(self, row, col):
+    def crawl_part_1(self, row, col, foo):
         basin = []
 
         self.mark_visited(row, col)
@@ -92,10 +94,37 @@ class AutoNavigation(object):
 
         self.basins.append([[row, col, origin_val]])
 
-    def crawl_part_2(self, row, col):
-        pass
+    def crawl_part_2(self, row, col, basin):
+        if self.is_visited(row, col):
+            return
 
-    def calculate_risk_level(self, basins):
+        self.mark_visited(row, col)
+
+        origin_val = self.value_at(row, col)
+
+        if origin_val == 9:
+            return
+        else:
+            basin.append([row, col, origin_val])
+
+            scan_points = [
+                [row-1, col],
+                [row+1, col],
+                [row, col-1],
+                [row, col+1]
+            ]
+
+            for target in scan_points:
+                target_val = self.value_at(target[0], target[1])
+
+                if target_val == None: #Out of bounds
+                    continue
+
+                self.crawl_part_2(target[0], target[1], basin)
+
+        return basin
+
+    def calculate_risk_level(self):
         risk = 0
 
         for basin in self.basins:
@@ -104,6 +133,11 @@ class AutoNavigation(object):
     
         return risk 
 
+    def calculate_size_product(self):
+        sizes = [len(b) for b in self.basins]
+        sizes.sort()
+
+        return sizes[-1] * sizes[-2] * sizes[-3]
 
 def bcolor(color, text):
     colors = {
@@ -125,19 +159,16 @@ def solution_part_1(data):
     an = AutoNavigation()
 
     an.load_data(data)
-    lp = an.detect_basins('crawl_part_1')
-
-    rl = an.calculate_risk_level(lp)
+    an.detect_basins('crawl_part_1')
+    rl = an.calculate_risk_level()
     print('Risk Level:',rl)
 
 def solution_part_2(data):
     an = AutoNavigation()
 
     an.load_data(data)
-    lp = an.detect_basins('crawl_part_2')
-
-    rl = an.calculate_risk_level(lp)
-    print('Risk Level:',rl)
+    an.detect_basins('crawl_part_2')
+    print("Size Product:", an.calculate_size_product())
 
 if __name__ == '__main__':
     data = get_test_data()
@@ -145,3 +176,9 @@ if __name__ == '__main__':
 
     data = get_data()
     solution_part_1(data)
+
+    data = get_test_data()
+    solution_part_2(data)
+
+    data = get_data()
+    solution_part_2(data)
