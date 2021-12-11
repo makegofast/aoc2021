@@ -3,10 +3,17 @@ class OctopusDetector(object):
         self.flashes = 0
         self.data = []
         self.reset_flash()
+        self.sync_flashes = []
 
     def load_data(self, data):
         for line in data:
             self.data.append([int(c) for c in line])
+
+    def get_first_sync_flash(self):
+        try:
+            return self.sync_flashes[0]
+        except IndexError:
+            return None
 
     def reset_flash(self):
         self.flashed = {}
@@ -54,7 +61,7 @@ class OctopusDetector(object):
             if n and n > 9:
                 self.flash(r, c)
 
-    def step(self):
+    def step(self, step):
         self.reset_flash()
 
         for row in range(0, len(self.data)):
@@ -71,9 +78,16 @@ class OctopusDetector(object):
                 if self.has_flashed(row, col):
                     self.data[row][col] = 0
 
-        self.status()
+        if sum(sum(v) for v in self.data) == 0:
+            self.sync_flashes.append(step)
+            print("FLASH")
 
-    def status(self):
+        self.status(step)
+
+    def status(self, step=None):
+        if not step == None:
+            print("Step",step)
+
         for row in self.data:
             line = ''
             for col in row:
@@ -81,16 +95,31 @@ class OctopusDetector(object):
             print(line)
         print()
 
-def solution(data, steps):
+def solution_part_1(data):
     od = OctopusDetector()
     od.load_data(data)
     od.status()
 
-    for i in range(0,steps):
-        print('step',i+1)
-        od.step()
+    for i in range(0,100):
+        od.step(i+1)
 
-    print(od.flashes)
+    print('Number of flashes:', od.flashes)
+
+    return od.flashes
+
+def solution_part_2(data):
+    od = OctopusDetector()
+    od.load_data(data)
+    od.status()
+
+    step = 1 
+    while not od.get_first_sync_flash():
+        od.step(step)
+        step += 1
+
+    print('First sync flash:', od.get_first_sync_flash()),
+
+    return od.get_first_sync_flash()
 
 def get_data():
     return [l.rstrip() for l in open('data.txt', 'r').readlines()]
@@ -100,7 +129,13 @@ def get_test_data():
 
 if __name__ == '__main__':
     data = get_test_data()
-    solution(data, 100)
+    solution_part_1(data)
 
     data = get_data()
-    solution(data, 100)
+    solution_part_1(data)
+
+    data = get_test_data()
+    solution_part_2(data)
+
+    data = get_data()
+    solution_part_2(data)
